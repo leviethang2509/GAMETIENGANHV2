@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌾 WordFarm V5 - 3D English Learning Game</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a472a 0%, #2d5016 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      color: #fff;
+    }
+
+    .container {
+      text-align: center;
+      background: rgba(0, 0, 0, 0.8);
+      border: 3px solid #4caf50;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 600px;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+    }
+
+    .logo {
+      font-size: 4em;
+      margin-bottom: 20px;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-20px); }
+    }
+
+    h1 {
+      color: #4caf50;
+      margin-bottom: 10px;
+      font-size: 2.5em;
+    }
+
+    .subtitle {
+      color: #ffeb3b;
+      margin-bottom: 30px;
+      font-size: 1.2em;
+    }
+
+    .description {
+      color: #ccc;
+      line-height: 1.6;
+      margin-bottom: 30px;
+      font-size: 1em;
+    }
+
+    .features {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 30px;
+      text-align: left;
+    }
+
+    .feature {
+      background: rgba(76, 175, 80, 0.1);
+      border-left: 3px solid #4caf50;
+      padding: 12px;
+      border-radius: 4px;
+    }
+
+    .feature strong {
+      color: #4caf50;
+    }
+
+    .buttons {
+      display: flex;
+      gap: 15px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .btn {
+      padding: 14px 28px;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s;
+      text-decoration: none;
+      display: inline-block;
+    }
+
+    .btn-primary {
+      background: #4caf50;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #45a049;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+    }
+
+    .btn-secondary {
+      background: #2196F3;
+      color: #fff;
+    }
+
+    .btn-secondary:hover {
+      background: #0b7dda;
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(33, 150, 243, 0.4);
+    }
+
+    .info {
+      background: rgba(33, 150, 243, 0.1);
+      border: 2px solid #2196F3;
+      border-radius: 6px;
+      padding: 15px;
+      margin-top: 20px;
+      font-size: 0.9em;
+      color: #90CAF9;
+    }
+
+    .browser-info {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(76, 175, 80, 0.3);
+      font-size: 0.85em;
+      color: #999;
+    }
+
+    .status {
+      display: inline-block;
+      background: #4caf50;
+      color: #fff;
+      padding: 6px 12px;
+      border-radius: 4px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .warning {
+      color: #ffeb3b;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="logo">🌾</div>
+    <h1>WordFarm V5</h1>
+    <div class="subtitle">3D English Learning Game</div>
+
+    <div class="description">
+      Learn English while farming! Plant crops, feed animals, and solve English quizzes to grow your farm. 
+      Play through vocabulary, grammar, and sentence structure challenges.
+    </div>
+
+    <div class="features">
+      <div class="feature">
+        <strong>🌱 8 Crop Plots</strong><br>
+        Plant and harvest crops by solving vocabulary quizzes
+      </div>
+      <div class="feature">
+        <strong>🐔 2 Animals</strong><br>
+        Feed animals with grammar challenges
+      </div>
+      <div class="feature">
+        <strong>⚙️ Mill</strong><br>
+        Process grain by solving sentence scrambles
+      </div>
+      <div class="feature">
+        <strong>💾 Auto-Save</strong><br>
+        Your progress saves automatically every 30 seconds
+      </div>
+      <div class="feature">
+        <strong>🎮 Cross-Browser</strong><br>
+        Works on Chrome, Firefox, Safari, Edge
+      </div>
+      <div class="feature">
+        <strong>📱 Responsive</strong><br>
+        Plays on desktop, tablet, and mobile
+      </div>
+    </div>
+
+    <div class="buttons">
+      <button class="btn btn-primary" onclick="startGame()">▶️ START GAME</button>
+      <button class="btn btn-secondary" onclick="showGuide()">📖 GAME GUIDE</button>
+    </div>
+
+    <div id="statusDiv" class="status" style="display: none;">✅ Game Ready</div>
+
+    <div class="info">
+      <strong>💡 Tip:</strong> Use Ctrl+S to save your progress manually. Your game data is stored locally on this device.
+    </div>
+
+    <div class="browser-info">
+      <strong>Browser:</strong> <span id="browserName">Detecting...</span><br>
+      <strong>Device:</strong> <span id="deviceType">Detecting...</span><br>
+      <strong>Storage:</strong> <span id="storageStatus">Checking...</span>
+    </div>
+  </div>
+
+  <script src="./config.js"></script>
+  <script>
+    // Update browser and device info
+    function updateBrowserInfo() {
+      if (typeof GAME_CONFIG !== 'undefined') {
+        const browser = GAME_CONFIG.BROWSER;
+        const deviceType = browser.isDesktop ? 'Desktop' : (browser.isTablet ? 'Tablet' : 'Mobile');
+        const storageType = browser.supportsLocalStorage ? 'LocalStorage ✓' : 
+                           (browser.supportsIndexedDB ? 'IndexedDB ✓' : 'In-Memory');
+
+        document.getElementById('browserName').textContent = `${browser.name} ${browser.version}`;
+        document.getElementById('deviceType').textContent = deviceType;
+        document.getElementById('storageStatus').textContent = storageType;
+        
+        // Show status
+        document.getElementById('statusDiv').style.display = 'inline-block';
+        
+        console.log('✅ Game configuration loaded');
+      } else {
+        console.warn('⚠️ Config not loaded, retrying...');
+        setTimeout(updateBrowserInfo, 100);
+      }
+    }
+
+    function startGame() {
+      // Verify game is properly configured
+      if (typeof GAME_CONFIG === 'undefined') {
+        alert('⚠️ Game configuration not loaded. Please refresh the page.');
+        location.reload();
+        return;
+      }
+
+      // Log game start info
+      console.log('🎮 Starting WordFarm V5...');
+      console.log(`Browser: ${GAME_CONFIG.BROWSER.name} ${GAME_CONFIG.BROWSER.version}`);
+      console.log(`Device: ${GAME_CONFIG.BROWSER.isDesktop ? 'Desktop' : (GAME_CONFIG.BROWSER.isTablet ? 'Tablet' : 'Mobile')}`);
+      console.log(`WebGL Support: ${GAME_CONFIG.BROWSER.supportsWebGL ? '✓' : '✗'}`);
+      console.log(`LocalStorage: ${GAME_CONFIG.BROWSER.supportsLocalStorage ? '✓' : '✗'}`);
+
+      // Load game
+      window.location.href = './game.html';
+    }
+
+    function showGuide() {
+      const guide = `
+=== WordFarm V5 - GAME GUIDE ===
+
+🎮 HOW TO PLAY:
+
+1. 🌱 CROPS (Left Side)
+   - Click on an empty plot to get a vocabulary quiz
+   - Answer correctly to plant a random crop
+   - Wait for the crop to grow and turn yellow
+   - Click on the ripe crop to harvest it
+
+2. 🐔 ANIMALS (Top Right)
+   - Click on an animal to get a grammar quiz
+   - Answer correctly and the animal will eat
+   - Wait for the animal to finish eating
+   - Click to collect items (eggs, milk)
+
+3. ⚙️ MILL (Top Right)
+   - You need 2 corn to use the mill
+   - Click the mill to get a sentence scramble quiz
+   - Arrange the words in the correct order
+   - Submit to get flour
+
+4. 💾 SAVE & LOAD
+   - Press Ctrl+S to save manually
+   - Your game auto-saves every 30 seconds
+   - Click "Load" button to restore a save
+   - Click "Reset" to start over
+
+📊 STATS:
+- ⭐ XP: Experience points from quizzes
+- 💰 Coins: Earned from harvests and animals
+- 🚜 Harvests: Total crops harvested
+- 🎓 Quizzes: Total quizzes completed
+
+💡 TIPS:
+- Answer quizzes correctly to advance faster
+- Wrong answers put plots on cooldown
+- Combine crops at the mill for flour
+- Check your inventory to track items
+- The game saves automatically!
+
+🌐 WORKS ON:
+- Chrome (Recommended)
+- Firefox
+- Safari
+- Edge
+- Mobile devices
+
+🔧 TROUBLESHOOTING:
+- If models don't load, geometric shapes are used instead
+- If audio doesn't play, game continues without sound
+- If save fails, data is stored in memory (refresh loses it)
+- On mobile, rotate to landscape for best experience
+
+Enjoy learning English while farming! 🌾
+      `;
+      alert(guide);
+    }
+
+    // Initialize on load
+    window.addEventListener('load', updateBrowserInfo);
+    
+    // Auto-start hint
+    console.log('%c🌾 WordFarm V5 Ready! Click "START GAME" to begin.', 'color: #4caf50; font-size: 14px; font-weight: bold;');
+  </script>
+</body>
+</html>

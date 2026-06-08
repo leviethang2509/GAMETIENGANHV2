@@ -1,0 +1,1317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🌾 WordFarm V5 - 3D English Learning Game</title>
+
+  <!-- Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Three.js (Local) -->
+  <script src="./libs/three/three.min.js"></script>
+  <script src="./libs/three/GLTFLoader.js"></script>
+  
+  <!-- Howler.js for Audio (Local) -->
+  <script src="./libs/howler/howler.min.js"></script>
+
+  <!-- WordFarm Config - Auto-grants permissions & optimizes for all browsers -->
+  <script src="./config.js"></script>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
+      background: #000;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100vh;
+    }
+
+    /* ===== LOADING SCREEN ===== */
+    #loadingScreen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(135deg, #1a472a 0%, #2d5016 100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      animation: fadeIn 0.5s;
+    }
+
+    #loadingScreen.hidden {
+      display: none;
+    }
+
+    .loading-content {
+      text-align: center;
+      color: #fff;
+    }
+
+    .loading-title {
+      font-size: 2.5em;
+      font-weight: bold;
+      margin-bottom: 30px;
+      color: #4caf50;
+    }
+
+    .loading-bar {
+      width: 300px;
+      height: 30px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 2px solid #4caf50;
+      border-radius: 15px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .loading-progress {
+      height: 100%;
+      background: linear-gradient(90deg, #4caf50, #45a049);
+      width: 0%;
+      transition: width 0.3s;
+    }
+
+    .loading-text {
+      font-size: 1.1em;
+      color: #4caf50;
+      margin-top: 15px;
+    }
+
+    /* ===== HUD ===== */
+    #hud {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      background: rgba(0, 0, 0, 0.9);
+      border: 3px solid #4caf50;
+      border-radius: 8px;
+      padding: 20px;
+      color: #fff;
+      font-size: 0.95em;
+      z-index: 10;
+      min-width: 300px;
+      max-width: 350px;
+    }
+
+    .hud-title {
+      color: #4caf50;
+      font-weight: bold;
+      margin-bottom: 15px;
+      font-size: 1.3em;
+      text-align: center;
+      border-bottom: 2px solid #4caf50;
+      padding-bottom: 10px;
+    }
+
+    .hud-stat {
+      display: flex;
+      justify-content: space-between;
+      margin: 8px 0;
+      padding: 6px 0;
+      border-bottom: 1px solid rgba(76, 175, 80, 0.3);
+      font-size: 0.9em;
+    }
+
+    .hud-stat-label { font-weight: 600; }
+    .hud-stat-value { color: #4caf50; font-weight: bold; }
+
+    .inventory-section {
+      margin-top: 15px;
+      padding-top: 15px;
+      border-top: 2px solid rgba(76, 175, 80, 0.5);
+    }
+
+    .inventory-title {
+      color: #ffeb3b;
+      font-weight: bold;
+      margin-bottom: 8px;
+      font-size: 0.95em;
+    }
+
+    .inventory-item {
+      display: flex;
+      justify-content: space-between;
+      padding: 4px 0;
+      font-size: 0.85em;
+    }
+
+    #hudButtons {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      z-index: 10;
+    }
+
+    .hud-btn {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #4caf50;
+      color: #fff;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 0.9em;
+    }
+
+    .hud-btn:hover {
+      background: #45a049;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+    }
+
+    .hud-btn.danger {
+      background: #f44336;
+    }
+
+    .hud-btn.danger:hover {
+      background: #da190b;
+      box-shadow: 0 4px 12px rgba(244, 67, 54, 0.4);
+    }
+
+    /* ===== QUIZ OVERLAYS ===== */
+    .quiz-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.9);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.3s;
+    }
+
+    .quiz-overlay.hidden {
+      display: none;
+    }
+
+    .quiz-panel {
+      background: linear-gradient(135deg, #2d5016 0%, #4caf50 100%);
+      border: 3px solid #fff;
+      border-radius: 12px;
+      padding: 40px;
+      max-width: 600px;
+      width: 90%;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+      animation: slideUp 0.4s ease-out;
+    }
+
+    .quiz-question {
+      font-size: 1.5em;
+      font-weight: bold;
+      color: #fff;
+      margin-bottom: 30px;
+      text-align: center;
+      line-height: 1.4;
+      min-height: 60px;
+    }
+
+    /* ===== VOCAB QUIZ (Multiple Choice) ===== */
+    #vocabOptions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .quiz-option {
+      padding: 15px 20px;
+      border: 2px solid #fff;
+      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1.05em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: left;
+    }
+
+    .quiz-option:hover {
+      background: rgba(255, 255, 255, 0.2);
+      border-color: #ffd700;
+      transform: scale(1.05);
+    }
+
+    /* ===== SCRAMBLE QUIZ (Drag & Drop / Click Order) ===== */
+    #scrambleWords {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 20px;
+      min-height: 50px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 8px;
+      border: 2px dashed rgba(255, 255, 255, 0.3);
+    }
+
+    .scramble-word {
+      padding: 10px 16px;
+      background: #4caf50;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: all 0.2s;
+      user-select: none;
+    }
+
+    .scramble-word:hover {
+      background: #45a049;
+      transform: scale(1.1);
+    }
+
+    .scramble-word.selected {
+      background: #ffeb3b;
+      color: #000;
+      transform: scale(1.05);
+    }
+
+    #scrambleAnswer {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      padding: 15px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      min-height: 50px;
+      margin-bottom: 20px;
+    }
+
+    .answer-word {
+      padding: 10px 16px;
+      background: #ffeb3b;
+      color: #000;
+      border-radius: 6px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .answer-word:hover {
+      background: #fdd835;
+    }
+
+    .quiz-hint {
+      text-align: center;
+      color: #fff;
+      font-size: 0.9em;
+      opacity: 0.8;
+      margin-top: 15px;
+    }
+
+    /* ===== TOAST ===== */
+    .toast {
+      position: fixed;
+      bottom: 100px;
+      right: 20px;
+      padding: 15px 25px;
+      border-radius: 8px;
+      color: #fff;
+      font-weight: bold;
+      font-size: 1.1em;
+      animation: slideInRight 0.3s ease-out, slideOutRight 0.3s ease-out 2.7s forwards;
+      z-index: 50;
+      max-width: 300px;
+    }
+
+    .toast-success { background: #4caf50; border-left: 4px solid #fff; }
+    .toast-error { background: #f44336; border-left: 4px solid #fff; }
+    .toast-info { background: #2196F3; border-left: 4px solid #fff; }
+
+    /* ===== FLOATING PARTICLES ===== */
+    .floating-particle {
+      position: fixed;
+      font-weight: bold;
+      font-size: 1.2em;
+      pointer-events: none;
+      animation: float-up 2s ease-out forwards;
+      z-index: 30;
+    }
+
+    @keyframes float-up {
+      0% { opacity: 1; transform: translateY(0) scale(1); }
+      100% { opacity: 0; transform: translateY(-80px) scale(0.8); }
+    }
+
+    /* ===== HELP TEXT ===== */
+    #helpText {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(0, 0, 0, 0.8);
+      border: 2px solid #4caf50;
+      border-radius: 8px;
+      padding: 15px 20px;
+      color: #fff;
+      font-size: 0.85em;
+      max-width: 280px;
+      z-index: 10;
+      line-height: 1.5;
+    }
+
+    .help-title { color: #4caf50; font-weight: bold; margin-bottom: 8px; }
+
+    /* ===== ANIMATIONS ===== */
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes slideUp { from { transform: translateY(50px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+    @keyframes slideInRight { from { transform: translateX(400px); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(400px); opacity: 0; } }
+  </style>
+</head>
+<body>
+  <!-- LOADING SCREEN -->
+  <div id="loadingScreen">
+    <div class="loading-content">
+      <div class="loading-title">🌾 WordFarm V5</div>
+      <div class="loading-bar">
+        <div class="loading-progress" id="loadingProgress"></div>
+      </div>
+      <div class="loading-text" id="loadingText">Loading models... 0%</div>
+    </div>
+  </div>
+
+  <!-- HUD -->
+  <div id="hud">
+    <div class="hud-title">🌾 WordFarm V5</div>
+    <div class="hud-stat">
+      <span class="hud-stat-label">⭐ XP:</span>
+      <span class="hud-stat-value" id="xpDisplay">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-stat-label">💰 Coins:</span>
+      <span class="hud-stat-value" id="coinsDisplay">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-stat-label">🚜 Harvests:</span>
+      <span class="hud-stat-value" id="harvestsDisplay">0</span>
+    </div>
+    <div class="hud-stat">
+      <span class="hud-stat-label">🎓 Quizzes:</span>
+      <span class="hud-stat-value" id="quizzesDisplay">0</span>
+    </div>
+
+    <div class="inventory-section">
+      <div class="inventory-title">📦 Inventory</div>
+      <div class="inventory-item">
+        <span>🌽 Corn:</span>
+        <span id="invCorn">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🥕 Carrot:</span>
+        <span id="invCarrot">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🍅 Tomato:</span>
+        <span id="invTomato">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🍎 Apple:</span>
+        <span id="invApple">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🥚 Eggs:</span>
+        <span id="invEggs">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🥛 Milk:</span>
+        <span id="invMilk">0</span>
+      </div>
+      <div class="inventory-item">
+        <span>🌾 Flour:</span>
+        <span id="invFlour">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- HUD BUTTONS -->
+  <div id="hudButtons">
+    <button class="hud-btn" onclick="saveGame()">💾 Save</button>
+    <button class="hud-btn" onclick="loadGame()">📂 Load</button>
+    <button class="hud-btn danger" onclick="resetGame()">🔄 Reset</button>
+  </div>
+
+  <!-- VOCAB QUIZ MODAL (Multiple Choice) -->
+  <div id="vocabOverlay" class="quiz-overlay hidden">
+    <div class="quiz-panel">
+      <div style="color: #ffeb3b; font-weight: bold; margin-bottom: 15px; text-align: center;">🌱 Plant a Crop</div>
+      <div id="vocabQuestion" class="quiz-question"></div>
+      <div id="vocabOptions"></div>
+      <div class="quiz-hint">Select the correct answer to plant your crop</div>
+    </div>
+  </div>
+
+  <!-- GRAMMAR QUIZ MODAL (Fill-in-the-blank) -->
+  <div id="grammarOverlay" class="quiz-overlay hidden">
+    <div class="quiz-panel">
+      <div style="color: #ffeb3b; font-weight: bold; margin-bottom: 15px; text-align: center;">🐔 Feed the Animal</div>
+      <div id="grammarQuestion" class="quiz-question"></div>
+      <div id="grammarOptions"></div>
+      <div class="quiz-hint">Choose the correct word to fill in the blank</div>
+    </div>
+  </div>
+
+  <!-- SCRAMBLE QUIZ MODAL (Sentence Scramble) -->
+  <div id="scrambleOverlay" class="quiz-overlay hidden">
+    <div class="quiz-panel">
+      <div style="color: #ffeb3b; font-weight: bold; margin-bottom: 15px; text-align: center;">⚙️ Mill Processing</div>
+      <div style="color: #fff; font-size: 1em; margin-bottom: 15px; text-align: center;">
+        Arrange words in correct order:
+      </div>
+      <div id="scrambleWords"></div>
+      <div style="text-align: center; color: #fff; margin-bottom: 15px;">↓ Your sentence ↓</div>
+      <div id="scrambleAnswer"></div>
+      <button id="submitScramble" style="width: 100%; padding: 12px; background: #ffeb3b; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 1em;" onclick="submitScramble()">Submit</button>
+      <div class="quiz-hint" style="margin-top: 15px;">Click words to order them correctly</div>
+    </div>
+  </div>
+
+  <!-- HELP TEXT -->
+  <div id="helpText">
+    <div class="help-title">How to Play</div>
+    <div>
+      <strong>🌱 Crops:</strong> Click → Quiz → Plant<br>
+      <strong>🐔 Animals:</strong> Click → Feed → Collect<br>
+      <strong>⚙️ Mill:</strong> Click → Scramble → Process
+    </div>
+  </div>
+
+  <script>
+    // ===== GAME DATA =====
+    const CROPS = {
+      carrot: { id: 'carrot', name: 'Carrot', emoji: '🥕', growTime: 40, xp: 10, coins: 25, model: 'Carrot.glb' },
+      corn: { id: 'corn', name: 'Corn', emoji: '🌽', growTime: 45, xp: 15, coins: 35, model: 'Corn.glb' },
+      tomato: { id: 'tomato', name: 'Tomato', emoji: '🍅', growTime: 50, xp: 20, coins: 45, model: 'Tomato.glb' },
+      apple: { id: 'apple', name: 'Apple Tree', emoji: '🍎', growTime: 60, xp: 25, coins: 55, model: 'AppleTree.glb' }
+    };
+
+    const ANIMALS = {
+      chicken: { id: 'chicken', name: 'Chicken', emoji: '🐔', feedTime: 30, xp: 12, coins: 40, collectItem: 'eggs', model: 'Chicken.glb' },
+      cow: { id: 'cow', name: 'Cow', emoji: '🐄', feedTime: 35, xp: 15, coins: 50, collectItem: 'milk', model: 'Cow.glb' }
+    };
+
+    const CROP_ARRAY = Object.values(CROPS);
+
+    const ENGLISH_QUIZZES = {
+      vocab: [
+        { id: 1, question: "What is the Vietnamese word for 'farm'?", options: ['Nhà hàng', 'Trang trại', 'Cây cối', 'Đất đai'], correct: 1 },
+        { id: 2, question: "Translate: 'crop' into Vietnamese", options: ['Vụ mùa', 'Cây trồng', 'Thu hoạch', 'Nông dân'], correct: 1 },
+        { id: 3, question: "What does 'harvest' mean in Vietnamese?", options: ['Bao bọc', 'Trồng', 'Thu hoạch', 'Gieo hạt'], correct: 2 },
+        { id: 4, question: "Fill in: 'I like to eat fresh ___'", options: ['water', 'vegetables', 'milk', 'bread'], correct: 1 },
+        { id: 5, question: "What is 'dâu tây' in English?", options: ['Blueberry', 'Strawberry', 'Raspberry', 'Blackberry'], correct: 1 },
+        { id: 6, question: "Translate: 'cà rốt' into English", options: ['Corn', 'Carrot', 'Cauliflower', 'Celery'], correct: 1 },
+        { id: 7, question: "What is 'ngô' in English?", options: ['Carrot', 'Corn', 'Bean', 'Pea'], correct: 1 },
+        { id: 8, question: "How do you say 'cà chua' in English?", options: ['Onion', 'Tomato', 'Pepper', 'Cucumber'], correct: 1 },
+        { id: 9, question: "What is 'táo' in English?", options: ['Orange', 'Grape', 'Apple', 'Pear'], correct: 2 },
+        { id: 10, question: "What is the plural of 'crop'?", options: ['Cropes', 'Crops', 'Cropp', 'Cropi'], correct: 1 },
+        { id: 11, question: "Translate: 'nông dân' into English", options: ['Farm', 'Farmer', 'Farming', 'Farmland'], correct: 1 },
+        { id: 12, question: "What is the English word for 'mưa'?", options: ['Sun', 'Rain', 'Snow', 'Wind'], correct: 1 },
+        { id: 13, question: "Translate: 'đất' into English", options: ['Water', 'Soil', 'Sky', 'Rock'], correct: 1 },
+        { id: 14, question: "What is 'cây' in English?", options: ['Plant', 'Tree', 'Flower', 'Leaf'], correct: 1 },
+        { id: 15, question: "Translate 'thú vật' into English", options: ['Pet', 'Animal', 'Creature', 'Beast'], correct: 1 },
+        { id: 16, question: "What is 'nước' in English?", options: ['Liquid', 'Water', 'Juice', 'Drink'], correct: 1 },
+        { id: 17, question: "How do you say 'trồng' in English?", options: ['Grow', 'Plant', 'Sow', 'Cultivate'], correct: 1 },
+        { id: 18, question: "What is 'công việc' in English?", options: ['Task', 'Job', 'Work', 'Labor'], correct: 2 },
+        { id: 19, question: "Translate 'tốt' into English", options: ['Bad', 'Good', 'Nice', 'Well'], correct: 1 },
+        { id: 20, question: "What is 'đẹp' in English?", options: ['Ugly', 'Pretty', 'Beautiful', 'Handsome'], correct: 2 }
+      ],
+      grammar: [
+        { id: 101, question: "The cow ___ eating grass", options: ['eat', 'eats', 'eating', 'ate'], correct: 1 },
+        { id: 102, question: "She ___ three eggs yesterday.", options: ['collect', 'collects', 'collected', 'collecting'], correct: 2 },
+        { id: 103, question: "The chicken ___ in the coop.", options: ['stay', 'stays', 'staying', 'stayed'], correct: 1 },
+        { id: 104, question: "We ___ milk from the cow.", options: ['gets', 'get', 'getting', 'got'], correct: 1 },
+        { id: 105, question: "The farm ___ many animals.", options: ['have', 'has', 'having', 'had'], correct: 1 },
+        { id: 106, question: "___ you like farming?", options: ['Does', 'Do', 'Did', 'Are'], correct: 1 },
+        { id: 107, question: "The crops ___ well this season.", options: ['grow', 'grows', 'growing', 'grew'], correct: 0 },
+        { id: 108, question: "He ___ the plants every day.", options: ['water', 'waters', 'watering', 'watered'], correct: 1 },
+        { id: 109, question: "I ___ farming since last year.", options: ['start', 'starts', 'have started', 'started'], correct: 2 },
+        { id: 110, question: "The eggs ___ in the basket.", options: ['is', 'are', 'am', 'been'], correct: 1 }
+      ],
+      scramble: [
+        { id: 201, words: ['farm', 'is', 'The', 'big'], answer: 'The farm is big' },
+        { id: 202, words: ['animals', 'I', 'love', 'farm'], answer: 'I love farm animals' },
+        { id: 203, words: ['today', 'crops', 'harvest', 'We'], answer: 'We harvest crops today' },
+        { id: 204, words: ['very', 'milk', 'is', 'This', 'fresh'], answer: 'This milk is very fresh' },
+        { id: 205, words: ['helps', 'farming', 'Practice', 'English'], answer: 'Practice farming helps English' },
+        { id: 206, words: ['chicken', 'The', 'eggs', 'lays'], answer: 'The chicken lays eggs' },
+        { id: 207, words: ['corn', 'grow', 'Plants', 'need'], answer: 'Plants need corn grow' },
+        { id: 208, words: ['farm', 'work', 'hard', 'on', 'I'], answer: 'I work hard on farm' }
+      ]
+    };
+
+     const GAME_CONFIG = { 
+       PLOT_COUNT: 8, 
+       ANIMAL_COUNT: 2,
+       SEED_GERMINATION_TIME: 2, 
+       PLOT_SIZE: 2, 
+       PLOT_SPACING: 4, 
+       CAMERA_DISTANCE: 18, 
+       COOLDOWN_TIME: 10, 
+       BONUS_XP_CORRECT: 5,
+       LOADING_TOTAL: 12
+     };
+
+    // ===== GAME STATE =====
+    let gameState = { 
+      plots: {}, 
+      animals: {},
+      xp: 0, 
+      coins: 0, 
+      harvests: 0, 
+      quizzes: 0,
+      inventory: { carrot: 0, corn: 0, tomato: 0, apple: 0, eggs: 0, milk: 0, flour: 0 },
+      currentQuiz: null, 
+      selectedPlotId: null, 
+      selectedAnimalId: null,
+      cooldownPlots: {},
+      windmillState: 'ready'
+    };
+
+    let scene, camera, renderer, raycaster, mouse;
+    let plotObjects = {}, animalObjects = {}, cropMeshes = {}, animalMeshes = {};
+    let loadedModels = {}, loadingProgress = 0;
+    let startTime = Date.now();
+    let gltfLoader;
+
+    // ===== LOADING & MODEL MANAGER =====
+    async function initModelLoader() {
+      return new Promise((resolve) => {
+        gltfLoader = new THREE.GLTFLoader();
+        loadModels().then(() => {
+          document.getElementById('loadingScreen').classList.add('hidden');
+          resolve();
+        });
+      });
+    }
+
+    async function loadModels() {
+      const modelNames = [
+        'Carrot.glb', 'Corn.glb', 'Tomato.glb', 'AppleTree.glb',
+        'Chicken.glb', 'Cow.glb', 'Windmill.glb', 'DirtPlot.glb'
+      ];
+      let loaded = 0;
+
+      for (const modelName of modelNames) {
+        loadingProgress = (loaded / modelNames.length) * 100;
+        updateLoadingUI(loaded, modelNames.length);
+
+        try {
+          const gltf = await new Promise((resolve, reject) => {
+            gltfLoader.load(
+              `./assets/models/${modelName}`,
+              (gltf) => resolve(gltf),
+              undefined,
+              (error) => {
+                console.warn(`⚠️ Model not found: ${modelName}. Using fallback.`);
+                resolve(null);
+              }
+            );
+          });
+          if (gltf) {
+            loadedModels[modelName] = gltf.scene;
+          }
+        } catch (e) {
+          console.warn(`⚠️ Could not load ${modelName}:`, e);
+        }
+        loaded++;
+      }
+
+      loadingProgress = 100;
+      updateLoadingUI(loaded, modelNames.length);
+      await new Promise(r => setTimeout(r, 500));
+    }
+
+    function updateLoadingUI(current, total) {
+      const percent = Math.round((current / total) * 100);
+      document.getElementById('loadingProgress').style.width = percent + '%';
+      document.getElementById('loadingText').textContent = `Loading models... ${percent}%`;
+    }
+
+    // ===== THREE.JS INIT =====
+    function initThreeJS() {
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87CEEB);
+
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+      camera.position.set(12, 12, 15);
+      camera.lookAt(0, 0, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(width, height);
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFShadowShadowMap;
+      document.body.appendChild(renderer.domElement);
+
+      raycaster = new THREE.Raycaster();
+      mouse = new THREE.Vector2();
+
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambientLight);
+
+      const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+      directionalLight.position.set(15, 25, 15);
+      directionalLight.castShadow = true;
+      directionalLight.shadow.mapSize.width = 2048;
+      directionalLight.shadow.mapSize.height = 2048;
+      directionalLight.shadow.camera.left = -30;
+      directionalLight.shadow.camera.right = 30;
+      directionalLight.shadow.camera.top = 30;
+      directionalLight.shadow.camera.bottom = -30;
+      scene.add(directionalLight);
+
+      const groundGeom = new THREE.PlaneGeometry(30, 30);
+      const groundMat = new THREE.MeshLambertMaterial({ color: 0x90EE90 });
+      const ground = new THREE.Mesh(groundGeom, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.receiveShadow = true;
+      scene.add(ground);
+
+      // Create 8 crop plots
+      let plotId = 0;
+      for (let z = 0; z < 2; z++) {
+        for (let x = 0; x < 4; x++) {
+          const posX = (x - 1.5) * GAME_CONFIG.PLOT_SPACING;
+          const posZ = (z - 0.5) * GAME_CONFIG.PLOT_SPACING;
+          createPlot(plotId, posX, 0, posZ, 'crop');
+          plotId++;
+        }
+      }
+
+      // Create 2 animal plots
+      for (let i = 0; i < 2; i++) {
+        const posX = (i - 0.5) * GAME_CONFIG.PLOT_SPACING;
+        const posZ = 4.5;
+        createPlot(i + 100, posX, 0, posZ, 'animal');
+      }
+
+      // Create windmill
+      createWindmill();
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('click', onMouseClick);
+      window.addEventListener('resize', onWindowResize);
+
+      animate();
+    }
+
+    function createPlot(id, x, y, z, type) {
+      const plotGeom = new THREE.BoxGeometry(GAME_CONFIG.PLOT_SIZE, 0.4, GAME_CONFIG.PLOT_SIZE);
+      const plotMat = new THREE.MeshLambertMaterial({ color: type === 'crop' ? 0x8B7355 : 0x6B4423 });
+      const plot = new THREE.Mesh(plotGeom, plotMat);
+      plot.position.set(x, y, z);
+      plot.castShadow = true;
+      plot.receiveShadow = true;
+      plot.userData = { plotId: id, type: type };
+      scene.add(plot);
+      plotObjects[id] = plot;
+
+      if (type === 'crop') {
+        gameState.plots[id] = { state: 'empty', crop: null, plantedAt: null };
+      } else {
+        gameState.animals[id] = { state: 'idle', animal: null, feedTime: 0, feedStartedAt: null };
+      }
+    }
+
+    function createWindmill() {
+      const windmillGroup = new THREE.Group();
+      const baseGeom = new THREE.CylinderGeometry(0.8, 1, 1, 8);
+      const baseMat = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+      const base = new THREE.Mesh(baseGeom, baseMat);
+      base.position.y = 0.5;
+      base.castShadow = true;
+      base.receiveShadow = true;
+      windmillGroup.add(base);
+
+      // Windmill blades
+      const bladeGeom = new THREE.BoxGeometry(3, 0.2, 0.2);
+      const bladeMat = new THREE.MeshStandardMaterial({ color: 0xDCDCDC });
+      const blade = new THREE.Mesh(bladeGeom, bladeMat);
+      blade.position.y = 1.5;
+      blade.castShadow = true;
+      blade.userData.isWindmillBlade = true;
+      windmillGroup.add(blade);
+
+      windmillGroup.position.set(7, 0, 5);
+      scene.add(windmillGroup);
+
+      plotObjects.windmill = windmillGroup;
+      windmillGroup.userData = { id: 'windmill', type: 'windmill' };
+    }
+
+    function createCropMesh(crop, position) {
+      let mesh;
+      const model = loadedModels[crop.model];
+
+      if (model) {
+        mesh = model.clone();
+        mesh.scale.set(1.5, 1.5, 1.5);
+      } else {
+        const geom = new THREE.SphereGeometry(0.5, 16, 16);
+        const mat = new THREE.MeshStandardMaterial({ color: 0x90EE90 });
+        mesh = new THREE.Mesh(geom, mat);
+      }
+
+      mesh.position.copy(position);
+      mesh.position.y += 0.5;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function createAnimalMesh(animal, position) {
+      let mesh;
+      const model = loadedModels[animal.model];
+
+      if (model) {
+        mesh = model.clone();
+        mesh.scale.set(1.2, 1.2, 1.2);
+      } else {
+        const geom = new THREE.BoxGeometry(0.8, 1, 1);
+        const mat = new THREE.MeshStandardMaterial({ color: 0xFFD700 });
+        mesh = new THREE.Mesh(geom, mat);
+      }
+
+      mesh.position.copy(position);
+      mesh.position.y += 0.5;
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.traverse(child => { if (child.isMesh) { child.castShadow = true; child.receiveShadow = true; } });
+      scene.add(mesh);
+      return mesh;
+    }
+
+    function plantCrop(plotId, crop) {
+      const plot = gameState.plots[plotId];
+      plot.state = 'growing';
+      plot.crop = crop;
+      plot.plantedAt = Date.now();
+
+      if (cropMeshes[plotId]) scene.remove(cropMeshes[plotId]);
+      const plotPos = plotObjects[plotId].position;
+      cropMeshes[plotId] = createCropMesh(crop, plotPos);
+    }
+
+    function feedAnimal(animalId, animal) {
+      const animalState = gameState.animals[animalId];
+      animalState.state = 'eating';
+      animalState.animal = animal;
+      animalState.feedTime = animal.feedTime;
+      animalState.feedStartedAt = Date.now();
+
+      if (animalMeshes[animalId]) scene.remove(animalMeshes[animalId]);
+      const plotPos = plotObjects[animalId].position;
+      animalMeshes[animalId] = createAnimalMesh(animal, plotPos);
+    }
+
+    function harvestCrop(plotId) {
+      const plot = gameState.plots[plotId];
+      if (plot.state !== 'ripe' || !plot.crop) return;
+
+      const crop = plot.crop;
+      gameState.inventory[crop.id]++;
+      gameState.xp += crop.xp;
+      gameState.coins += crop.coins;
+      gameState.harvests++;
+
+      if (cropMeshes[plotId]) { scene.remove(cropMeshes[plotId]); delete cropMeshes[plotId]; }
+      plot.state = 'empty';
+      plot.crop = null;
+
+      playSound('harvest');
+      showFloatingParticle(plotObjects[plotId].position, `+${crop.xp} XP`);
+      updateHUD();
+    }
+
+    function collectAnimal(animalId) {
+      const animalState = gameState.animals[animalId];
+      if (animalState.state !== 'ready' || !animalState.animal) return;
+
+      const animal = animalState.animal;
+      gameState.inventory[animal.collectItem]++;
+      gameState.xp += animal.xp;
+      gameState.coins += animal.coins;
+
+      if (animalMeshes[animalId]) { scene.remove(animalMeshes[animalId]); delete animalMeshes[animalId]; }
+      animalState.state = 'idle';
+      animalState.animal = null;
+
+      playSound('harvest');
+      showFloatingParticle(plotObjects[animalId].position, `+${animal.coins} 💰`);
+      updateHUD();
+    }
+
+    function showQuiz(type, plotId = null, animalId = null) {
+      gameState.selectedPlotId = plotId;
+      gameState.selectedAnimalId = animalId;
+
+      if (type === 'vocab') {
+        const quiz = ENGLISH_QUIZZES.vocab[Math.floor(Math.random() * ENGLISH_QUIZZES.vocab.length)];
+        gameState.currentQuiz = { type: 'vocab', data: quiz };
+        document.getElementById('vocabQuestion').textContent = quiz.question;
+        const optionsDiv = document.getElementById('vocabOptions');
+        optionsDiv.innerHTML = '';
+        quiz.options.forEach((option, idx) => {
+          const btn = document.createElement('button');
+          btn.textContent = option;
+          btn.className = 'quiz-option';
+          btn.onclick = () => answerVocab(idx);
+          optionsDiv.appendChild(btn);
+        });
+        document.getElementById('vocabOverlay').classList.remove('hidden');
+      } else if (type === 'grammar') {
+        const quiz = ENGLISH_QUIZZES.grammar[Math.floor(Math.random() * ENGLISH_QUIZZES.grammar.length)];
+        gameState.currentQuiz = { type: 'grammar', data: quiz };
+        document.getElementById('grammarQuestion').textContent = quiz.question;
+        const optionsDiv = document.getElementById('grammarOptions');
+        optionsDiv.innerHTML = '';
+        quiz.options.forEach((option, idx) => {
+          const btn = document.createElement('button');
+          btn.textContent = option;
+          btn.className = 'quiz-option';
+          btn.onclick = () => answerGrammar(idx);
+          optionsDiv.appendChild(btn);
+        });
+        document.getElementById('grammarOverlay').classList.remove('hidden');
+      } else if (type === 'scramble') {
+        const quiz = ENGLISH_QUIZZES.scramble[Math.floor(Math.random() * ENGLISH_QUIZZES.scramble.length)];
+        gameState.currentQuiz = { type: 'scramble', data: quiz };
+        
+        const wordsDiv = document.getElementById('scrambleWords');
+        wordsDiv.innerHTML = '';
+        const shuffled = [...quiz.words].sort(() => Math.random() - 0.5);
+        shuffled.forEach(word => {
+          const btn = document.createElement('button');
+          btn.textContent = word;
+          btn.className = 'scramble-word';
+          btn.onclick = () => addScrambleWord(word, btn);
+          wordsDiv.appendChild(btn);
+        });
+        document.getElementById('scrambleAnswer').innerHTML = '';
+        document.getElementById('scrambleOverlay').classList.remove('hidden');
+      }
+    }
+
+    function answerVocab(selectedIdx) {
+      const quiz = gameState.currentQuiz.data;
+      const plotId = gameState.selectedPlotId;
+
+      if (selectedIdx === quiz.correct) {
+        playSound('correct');
+        const crop = CROP_ARRAY[Math.floor(Math.random() * CROP_ARRAY.length)];
+        plantCrop(plotId, crop);
+        gameState.xp += GAME_CONFIG.BONUS_XP_CORRECT;
+        gameState.quizzes++;
+        closeQuiz('vocab');
+        updateHUD();
+        showToast('✅ Correct! Crop planted', 'success');
+      } else {
+        playSound('wrong');
+        gameState.cooldownPlots[plotId] = GAME_CONFIG.COOLDOWN_TIME;
+        closeQuiz('vocab');
+        showToast('❌ Wrong! Try again later', 'error');
+      }
+    }
+
+    function answerGrammar(selectedIdx) {
+      const quiz = gameState.currentQuiz.data;
+      const animalId = gameState.selectedAnimalId;
+
+      if (selectedIdx === quiz.correct) {
+        playSound('correct');
+        const animalType = animalId === 100 ? 'chicken' : 'cow';
+        feedAnimal(animalId, ANIMALS[animalType]);
+        gameState.xp += GAME_CONFIG.BONUS_XP_CORRECT;
+        gameState.quizzes++;
+        closeQuiz('grammar');
+        updateHUD();
+        showToast('✅ Correct! Animal is eating', 'success');
+      } else {
+        playSound('wrong');
+        closeQuiz('grammar');
+        showToast('❌ Wrong! Try again', 'error');
+      }
+    }
+
+    function addScrambleWord(word, btn) {
+      btn.classList.toggle('selected');
+      const answerDiv = document.getElementById('scrambleAnswer');
+      
+      if (btn.classList.contains('selected')) {
+        const wordEl = document.createElement('div');
+        wordEl.className = 'answer-word';
+        wordEl.textContent = word;
+        wordEl.dataset.word = word;
+        wordEl.onclick = () => {
+          wordEl.remove();
+          btn.classList.remove('selected');
+        };
+        answerDiv.appendChild(wordEl);
+      } else {
+        const words = answerDiv.querySelectorAll('[data-word]');
+        words.forEach(w => {
+          if (w.dataset.word === word) {
+            w.remove();
+          }
+        });
+      }
+    }
+
+    function submitScramble() {
+      const quiz = gameState.currentQuiz.data;
+      const answerDiv = document.getElementById('scrambleAnswer');
+      const words = Array.from(answerDiv.querySelectorAll('.answer-word')).map(w => w.textContent);
+      const userAnswer = words.join(' ');
+
+      if (userAnswer === quiz.answer) {
+        playSound('correct');
+        gameState.xp += 15;
+        gameState.coins += 50;
+        gameState.inventory.flour++;
+        gameState.quizzes++;
+        gameState.windmillState = 'processing';
+        closeQuiz('scramble');
+        updateHUD();
+        showToast('✅ Correct! Windmill is processing', 'success');
+      } else {
+        playSound('wrong');
+        showToast(`❌ Wrong! Answer: ${quiz.answer}`, 'error');
+      }
+    }
+
+    function closeQuiz(type) {
+      if (type === 'vocab') {
+        document.getElementById('vocabOverlay').classList.add('hidden');
+      } else if (type === 'grammar') {
+        document.getElementById('grammarOverlay').classList.add('hidden');
+      } else if (type === 'scramble') {
+        document.getElementById('scrambleOverlay').classList.add('hidden');
+      }
+      gameState.currentQuiz = null;
+      gameState.selectedPlotId = null;
+      gameState.selectedAnimalId = null;
+    }
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const currentTime = (Date.now() - startTime) / 1000;
+
+      // Update crops
+      for (let plotId = 0; plotId < GAME_CONFIG.PLOT_COUNT; plotId++) {
+        const plot = gameState.plots[plotId];
+        const cropMesh = cropMeshes[plotId];
+
+        if (plot.crop && cropMesh) {
+          const elapsed = (Date.now() - plot.plantedAt) / 1000;
+          const totalGrowth = plot.crop.growTime;
+
+          if (elapsed >= totalGrowth) {
+            plot.state = 'ripe';
+          } else {
+            plot.state = 'growing';
+            const growProgress = elapsed / totalGrowth;
+            const scale = 0.5 + growProgress * 0.5;
+            cropMesh.scale.set(scale, scale, scale);
+          }
+
+          if (plot.state === 'ripe') {
+            const bounce = Math.sin(currentTime * 3) * 0.1;
+            cropMesh.scale.set(1 + bounce, 1 + bounce, 1 + bounce);
+          }
+        }
+      }
+
+      // Update animals
+      for (let animalId = 100; animalId < 100 + GAME_CONFIG.ANIMAL_COUNT; animalId++) {
+        const animalState = gameState.animals[animalId];
+        if (animalState && animalState.state === 'eating') {
+          const elapsed = (Date.now() - animalState.feedStartedAt) / 1000;
+          if (elapsed >= animalState.feedTime) {
+            animalState.state = 'ready';
+            playSound('correct');
+          }
+        }
+      }
+
+      // Update windmill blades
+      if (plotObjects.windmill) {
+        const blade = plotObjects.windmill.children[1];
+        if (blade) blade.rotation.z += 0.05;
+      }
+
+      // Update cooldowns
+      for (const plotId in gameState.cooldownPlots) {
+        gameState.cooldownPlots[plotId]--;
+        if (gameState.cooldownPlots[plotId] <= 0) delete gameState.cooldownPlots[plotId];
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    function onMouseMove(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const allPlots = Object.values(plotObjects);
+      const intersects = raycaster.intersectObjects(allPlots);
+
+      allPlots.forEach(plot => {
+        if (plot.material) plot.material.color.set(plot.userData.type === 'animal' ? 0x6B4423 : 0x8B7355);
+      });
+
+      if (intersects.length > 0) {
+        intersects[0].object.material.color.set(0xA0A0A0);
+      }
+    }
+
+    function onMouseClick(event) {
+      mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+      raycaster.setFromCamera(mouse, camera);
+
+      const allPlots = Object.values(plotObjects);
+      const intersects = raycaster.intersectObjects(allPlots, true);
+
+      if (intersects.length > 0) {
+        let clickedObject = intersects[0].object;
+        
+        // Check if it's windmill blade
+        if (clickedObject.userData?.isWindmillBlade) {
+          handleWindmillClick();
+          return;
+        }
+
+        // Find parent plot
+        while (clickedObject && !clickedObject.userData?.plotId && !clickedObject.userData?.type) {
+          clickedObject = clickedObject.parent;
+        }
+
+        if (!clickedObject) return;
+
+        const userData = clickedObject.userData;
+        if (!userData) return;
+
+        if (userData.type === 'windmill') {
+          handleWindmillClick();
+        } else if (userData.type === 'crop') {
+          handleCropClick(userData.plotId);
+        } else if (userData.type === 'animal') {
+          handleAnimalClick(userData.plotId);
+        }
+      }
+    }
+
+    function handleCropClick(plotId) {
+      if (gameState.cooldownPlots[plotId]) {
+        showToast(`⏳ Plot on cooldown: ${gameState.cooldownPlots[plotId]}s`, 'info');
+        return;
+      }
+
+      const plot = gameState.plots[plotId];
+      if (plot.state === 'empty') {
+        showQuiz('vocab', plotId);
+      } else if (plot.state === 'ripe') {
+        harvestCrop(plotId);
+      }
+    }
+
+    function handleAnimalClick(animalId) {
+      const animalState = gameState.animals[animalId];
+      if (animalState.state === 'idle') {
+        showQuiz('grammar', null, animalId);
+      } else if (animalState.state === 'ready') {
+        collectAnimal(animalId);
+      }
+    }
+
+    function handleWindmillClick() {
+      if (gameState.inventory.corn >= 2) {
+        showQuiz('scramble');
+      } else {
+        showToast('❌ Need 2 Corn to use the mill', 'error');
+      }
+    }
+
+    function onWindowResize() {
+      const width = window.innerWidth;
+      const height = window.innerHeight;
+      camera.aspect = width / height;
+      camera.updateProjectionMatrix();
+      renderer.setSize(width, height);
+    }
+
+    function showFloatingParticle(position, text) {
+      const particle = document.createElement('div');
+      particle.className = 'floating-particle';
+      particle.textContent = text;
+      particle.style.left = (window.innerWidth / 2) + 'px';
+      particle.style.top = (window.innerHeight / 2) + 'px';
+      
+      if (text.includes('XP')) particle.style.color = '#ffeb3b';
+      else if (text.includes('💰')) particle.style.color = '#4caf50';
+      else particle.style.color = '#fff';
+
+      document.body.appendChild(particle);
+      setTimeout(() => particle.remove(), 2000);
+    }
+
+    // ===== AUDIO =====
+    const sounds = { bgm: null, click: null, correct: null, wrong: null, harvest: null };
+
+    function initAudio() {
+      try {
+        sounds.bgm = new Howl({ src: ['./assets/audio/bgm.mp3'], loop: true, volume: 0.3, onloaderror: () => console.warn('BGM not found') });
+        sounds.click = new Howl({ src: ['./assets/audio/click.mp3'], volume: 0.5, onloaderror: () => console.warn('Click sound not found') });
+        sounds.correct = new Howl({ src: ['./assets/audio/correct.mp3'], volume: 0.6, onloaderror: () => console.warn('Correct sound not found') });
+        sounds.wrong = new Howl({ src: ['./assets/audio/wrong.mp3'], volume: 0.5, onloaderror: () => console.warn('Wrong sound not found') });
+        sounds.harvest = new Howl({ src: ['./assets/audio/harvest.mp3'], volume: 0.7, onloaderror: () => console.warn('Harvest sound not found') });
+        sounds.bgm.play();
+      } catch (e) {
+        console.warn('Audio system not available', e);
+      }
+    }
+
+    function playSound(soundName) {
+      if (sounds[soundName]) {
+        try { sounds[soundName].play(); } catch (e) { console.warn(`Could not play sound: ${soundName}`); }
+      }
+    }
+
+    // ===== HUD & UI =====
+    function updateHUD() {
+      document.getElementById('xpDisplay').textContent = gameState.xp;
+      document.getElementById('coinsDisplay').textContent = gameState.coins;
+      document.getElementById('harvestsDisplay').textContent = gameState.harvests;
+      document.getElementById('quizzesDisplay').textContent = gameState.quizzes;
+
+      document.getElementById('invCorn').textContent = gameState.inventory.corn;
+      document.getElementById('invCarrot').textContent = gameState.inventory.carrot;
+      document.getElementById('invTomato').textContent = gameState.inventory.tomato;
+      document.getElementById('invApple').textContent = gameState.inventory.apple;
+      document.getElementById('invEggs').textContent = gameState.inventory.eggs;
+      document.getElementById('invMilk').textContent = gameState.inventory.milk;
+      document.getElementById('invFlour').textContent = gameState.inventory.flour;
+    }
+
+    function showToast(message, type = 'info') {
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.textContent = message;
+      document.body.appendChild(toast);
+      setTimeout(() => toast.remove(), 3000);
+    }
+
+    // ===== SAVE/LOAD =====
+    function saveGame() {
+      const saveData = { gameState, timestamp: Date.now() };
+      localStorage.setItem('wordfarm_v5_save', JSON.stringify(saveData));
+      showToast('💾 Game saved!', 'success');
+    }
+
+    function loadGame() {
+      const saveStr = localStorage.getItem('wordfarm_v5_save');
+      if (!saveStr) { showToast('❌ No save found', 'error'); return; }
+      const saveData = JSON.parse(saveStr);
+      gameState = saveData.gameState;
+      updateHUD();
+      showToast('📂 Game loaded!', 'success');
+    }
+
+    function resetGame() {
+      if (!confirm('⚠️ Reset game? This cannot be undone!')) return;
+      gameState = { 
+        plots: {}, 
+        animals: {},
+        xp: 0, 
+        coins: 0, 
+        harvests: 0, 
+        quizzes: 0,
+        inventory: { carrot: 0, corn: 0, tomato: 0, apple: 0, eggs: 0, milk: 0, flour: 0 },
+        currentQuiz: null, 
+        selectedPlotId: null, 
+        selectedAnimalId: null,
+        cooldownPlots: {},
+        windmillState: 'ready'
+      };
+
+      for (const cropId in cropMeshes) scene.remove(cropMeshes[cropId]);
+      for (const animalId in animalMeshes) scene.remove(animalMeshes[animalId]);
+      cropMeshes = {};
+      animalMeshes = {};
+
+      for (let i = 0; i < GAME_CONFIG.PLOT_COUNT; i++) {
+        gameState.plots[i] = { state: 'empty', crop: null, plantedAt: null };
+      }
+      for (let i = 0; i < GAME_CONFIG.ANIMAL_COUNT; i++) {
+        gameState.animals[100 + i] = { state: 'idle', animal: null, feedTime: 0, feedStartedAt: null };
+      }
+
+      localStorage.removeItem('wordfarm_v5_save');
+      updateHUD();
+      showToast('✅ Game reset!', 'success');
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+        e.preventDefault();
+        saveGame();
+      }
+    });
+
+    // ===== INIT =====
+    window.addEventListener('load', async () => {
+      console.log('🎮 WordFarm V5 - 3D English Learning Game Starting...');
+      
+      const saveStr = localStorage.getItem('wordfarm_v5_save');
+      if (saveStr) {
+        const saveData = JSON.parse(saveStr);
+        gameState = saveData.gameState;
+      } else {
+        for (let i = 0; i < GAME_CONFIG.PLOT_COUNT; i++) {
+          gameState.plots[i] = { state: 'empty', crop: null, plantedAt: null };
+        }
+        for (let i = 0; i < GAME_CONFIG.ANIMAL_COUNT; i++) {
+          gameState.animals[100 + i] = { state: 'idle', animal: null, feedTime: 0, feedStartedAt: null };
+        }
+      }
+
+      await initModelLoader();
+      initThreeJS();
+      initAudio();
+      updateHUD();
+
+      setInterval(() => {
+        const saveData = { gameState, timestamp: Date.now() };
+        localStorage.setItem('wordfarm_v5_save', JSON.stringify(saveData));
+      }, 30000);
+    });
+  </script>
+</body>
+</html>
